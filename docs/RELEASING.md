@@ -6,13 +6,25 @@ Release Please maintains the release pull request, `CHANGELOG.md`, and package v
 
 Add a fine-grained personal access token as the `RELEASE_PLEASE_TOKEN` Actions secret. It needs read/write access to repository contents, issues, and pull requests so Release Please can create and update release pull requests and their checks.
 
-Add these public build values as Actions repository variables:
+CI and Release require these three repository variables under **Settings → Secrets and variables → Actions → Variables**. Configure them together for the public OAuth application you intend to use:
 
 - `VITE_CLERK_OAUTH_CLIENT_ID`
 - `VITE_CLERK_OAUTH_ISSUER`
 - `VITE_WEB_APP_URL`
 
+No application IDs or endpoint defaults are embedded in the workflows. Missing values stop the build with a configuration error before packaging. These are public build values, not secrets; they are included in the compiled extension. Fork owners must configure their own repository variables.
+
 GitHub release immutability can remain enabled. The release is kept as a draft until every asset has been uploaded.
+
+## Branch and PR downloads
+
+The CI workflow runs on pushes to every branch, PR creation/updates, and manual dispatch. It installs locked dependencies, checks lint/tests and production dependencies, builds real packages, validates archive contents, generates SHA-256 checksums, and uploads manual Chromium/Firefox ZIPs. It uses read-only repository permissions; PR code never gets a release publishing token. Test-only OAuth values are not used in downloadable packages.
+
+The run summary links directly to each install ZIP. `actions/upload-artifact@v7` uploads single files with `archive: false`, so users do not have to unpack a ZIP containing another ZIP. Artifacts expire after 30 days; GitHub requires sign-in for downloads. Installation instructions and build provenance are embedded in each package. Preview files keep the package version; the commit and run identify the exact build.
+
+For a newly forked repository, open **Actions** and click **I understand my workflows, go ahead and enable them** once. This first-run gate can still be active even when the API reports Actions as enabled. Configure the three build variables above, then push a new commit after activation; earlier blocked pushes are not replayed. No Release Please setup is needed for these branch builds. The Release Please token is only needed for the formal version flow. Manual dispatch becomes available once the workflow exists on the default branch; a branch push works immediately.
+
+Locally, after committing the source tree, run `pnpm package` with the public build environment configured, then `node scripts/verify-packages.mjs`. The verifier is shared by CI and Release and rejects missing/corrupt archives, mismatched source/version/target metadata, missing installation assets, and invalid browser manifests. See [installation instructions](INSTALL.md).
 
 ## Release process
 
